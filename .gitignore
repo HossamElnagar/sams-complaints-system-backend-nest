@@ -1,0 +1,67 @@
+# ================================
+# Compiled output & Cache
+# ================================
+/dist
+/build
+/node_modules
+*.tsbuildinfo
+.temp
+.tmp
+.cache
+.eslintcache
+.prettiercache
+
+# ================================
+# Logs
+# ================================
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ================================
+# Environment variables & secrets
+# ================================
+.env
+.env.*
+.env.local
+!.env.example
+
+# ================================
+# Test & coverage
+# ================================
+/coverage
+/.nyc_output
+
+# ================================
+# Runtime data
+# ================================
+pids/
+*.pid
+*.seed
+*.pid.lock
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# ================================
+# OS & System
+# ================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ================================
+# IDEs and editors
+# ================================
+.idea/
+*.iml
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+.vscode/
