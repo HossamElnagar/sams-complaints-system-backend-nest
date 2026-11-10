@@ -1,54 +1,40 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-
-import {
-  Admin,
-  AdminDocument,
-} from '../../admins/schemas/admin.schema.js';
+import { Request } from 'express';
+import { AuthService } from '../auth.service.js';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     configService: ConfigService,
-
-    @InjectModel(Admin.name)
-    private readonly adminModel: Model<AdminDocument>,
+    private readonly authService: AuthService,
   ) {
     super({
-      jwtFromRequest:
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
-
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-
-      secretOrKey:
-        configService.getOrThrow<string>('JWT_SECRET'),
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: { sub: string }) {
-    const admin = await this.adminModel.findById(
-      payload.sub,
-    );
-
-    if (!admin) {
-      throw new UnauthorizedException(
-        'الحساب غير موجود أو غير مفعّل',
-      );
+  async validate(req: Request, payload: any) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const rawToken = authHeader.substring(7);
+      const isRevoked = await this.authService.isTokenRevoked(rawToken);
+      if (isRevoked) {
+        throw new UnauthorizedException('انتهت صلاحية الرمز أو تم إبطاله');
+      }
     }
 
     return {
-      id: admin._id.toString(),
-      fullName: admin.fullName,
-      email: admin.email,
-      role: admin.role,
-      branch: admin.branch,
+      userId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      branchId: payload.branchId,
+      departmentId: payload.departmentId,
     };
   }
 }
