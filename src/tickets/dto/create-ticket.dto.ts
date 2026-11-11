@@ -1,6 +1,5 @@
-import {IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString,IsPhoneNumber,MinLength} from "class-validator";  
-import { TicketCategory, TicketPriority, TicketStatus } from "../schemas/ticket.schema.js";
-import { Branches } from "../../admins/enums/branches.enum.js";
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsPhoneNumber, MinLength } from 'class-validator';
+import { TicketCategory, TicketPriority } from '../schemas/ticket.schema.js';
 
 export class CreateTicketDto {
   @IsString({ message: 'اسم الطالب يجب أن يكون نصاً' })
@@ -28,14 +27,18 @@ export class CreateTicketDto {
   description: string;
 
   @IsOptional()
-  @IsEnum(TicketCategory, { message: 'تصنيف الشكوى غير صالحة' })
+  @IsEnum(TicketCategory, { message: 'تصنيف الشكوى غير صالح' })
   category?: TicketCategory;
 
   @IsOptional()
   @IsEnum(TicketPriority, { message: 'أولوية الشكوى غير صالحة' })
   priority?: TicketPriority;
 
+  @IsOptional()
+  @IsString({ message: 'الفرع يجب أن يكون نصاً' })
+  branch?: string;
 
-  @IsEnum(Branches, { message: 'الفرع غير صالح' })
-  branch: Branches;
+  @IsOptional()
+  @IsString({ message: 'معرف الفرع يجب أن يكون نصاً' })
+  branchId?: string;
 }
