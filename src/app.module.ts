@@ -7,6 +7,7 @@ import { TicketsModule } from './tickets/tickets.module.js';
 import { BranchesModule } from './branches/branches.module.js';
 import { DepartmentsModule } from './departments/departments.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
+import { AiModule } from './ai/ai.module.js';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { OutboxModule } from './outbox/outbox.module.js';
     BranchesModule,
     DepartmentsModule,
     OutboxModule,
+    AiModule,
     TicketsModule,
   ],
 })
