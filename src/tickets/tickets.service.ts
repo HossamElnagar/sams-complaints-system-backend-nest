@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Ticket, TicketDocument, TicketStatus } from './schemas/ticket.schema.js';
@@ -108,6 +108,10 @@ export class TicketsService {
    * Requires mandatory written human justification.
    */
   async resolve(id: string, dto: ResolveTicketDto, user: AuthenticatedUser): Promise<TicketDocument> {
+    if (!dto.justification || dto.justification.trim().length < 10) {
+      throw new BadRequestException('مبرر القرار إلزامي ويجب ألا يقل عن 10 أحرف');
+    }
+
     const ticket = await this.ticketmodel.findById(id).exec();
     if (!ticket) {
       throw new NotFoundException('الشكوى غير موجودة');
