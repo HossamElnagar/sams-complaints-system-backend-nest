@@ -8,6 +8,7 @@ import { BranchesModule } from './branches/branches.module.js';
 import { DepartmentsModule } from './departments/departments.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
 import { AiModule } from './ai/ai.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AiModule } from './ai/ai.module.js';
     OutboxModule,
     AiModule,
     TicketsModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}
