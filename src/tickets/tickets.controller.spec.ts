@@ -11,6 +11,9 @@ describe('TicketsController', () => {
     findAll: vi.fn(),
     findByBranch: vi.fn(),
     findOneById: vi.fn(),
+    findScoped: vi.fn(),
+    dispatch: vi.fn(),
+    resolve: vi.fn(),
   };
 
   beforeEach(async () => {

@@ -3,7 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Ticket, TicketDocument, TicketStatus } from './schemas/ticket.schema.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
+import { DispatchTicketDto } from './dto/dispatch-ticket.dto.js';
+import { ResolveTicketDto } from './dto/resolve-ticket.dto.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { TenancyScoper, AuthenticatedUser } from '../common/scopers/tenancy.scoper.js';
 
 @Injectable()
 export class TicketsService {
@@ -41,6 +44,122 @@ export class TicketsService {
     return this.outboxService.persistTicketWithJobs(ticket);
   }
 
+  /**
+   * Milestone 3: Dispatch or Escalate a Ticket.
+   * Central Complaints Head retains sole authority to inspect AI predictions and dispatch/escalate.
+   */
+  async dispatch(id: string, dto: DispatchTicketDto, user: AuthenticatedUser): Promise<TicketDocument> {
+    TenancyScoper.assertCanDispatch(user);
+
+    const ticket = await this.ticketmodel.findById(id).exec();
+    if (!ticket) {
+      throw new NotFoundException('الشكوى غير موجودة');
+    }
+
+    if (!ticket.routing) {
+      ticket.routing = { isEscalatedToPresident: false };
+    }
+
+    const adminObjectId = new Types.ObjectId(user.userId);
+    const now = new Date();
+
+    if (dto.isEscalatedToPresident) {
+      ticket.routing.isEscalatedToPresident = true;
+      ticket.routing.escalationReason = dto.escalationReason;
+      ticket.routing.dispatchedBy = adminObjectId;
+      ticket.routing.dispatchedAt = now;
+      ticket.status = TicketStatus.InProgress;
+
+      ticket.timeline.push({
+        action: 'تصعيد الشكوى لرئيس الأكاديمية',
+        note: dto.escalationReason ? `سبب التصعيد: ${dto.escalationReason}` : 'تم التصعيد لمكتب رئيس الأكاديمية للبت المباشر',
+        performedBy: adminObjectId,
+        timestamp: now,
+      });
+    } else {
+      if (!dto.assignedBranchId || !dto.assignedDepartmentId) {
+        throw new ForbiddenException('يجب تحديد الفرع والقسم المستهدف للتوجيه');
+      }
+
+      const branchObjectId = new Types.ObjectId(dto.assignedBranchId);
+      const deptObjectId = new Types.ObjectId(dto.assignedDepartmentId);
+
+      ticket.branchId = branchObjectId;
+      ticket.routing.assignedBranchId = branchObjectId;
+      ticket.routing.assignedDepartmentId = deptObjectId;
+      ticket.routing.isEscalatedToPresident = false;
+      ticket.routing.dispatchedBy = adminObjectId;
+      ticket.routing.dispatchedAt = now;
+      ticket.status = TicketStatus.InProgress;
+
+      ticket.timeline.push({
+        action: 'توجيه الشكوى للفرع المختص',
+        note: dto.dispatchNote || 'تم توجيه الشكوى رسمياً إلى الفرع والقسم المعني لاتخاذ اللازم',
+        performedBy: adminObjectId,
+        timestamp: now,
+      });
+    }
+
+    return ticket.save();
+  }
+
+  /**
+   * Milestone 3: Staff Resolution or Rejection.
+   * Requires mandatory written human justification.
+   */
+  async resolve(id: string, dto: ResolveTicketDto, user: AuthenticatedUser): Promise<TicketDocument> {
+    const ticket = await this.ticketmodel.findById(id).exec();
+    if (!ticket) {
+      throw new NotFoundException('الشكوى غير موجودة');
+    }
+
+    // Verify user has authority to resolve this specific ticket
+    TenancyScoper.assertCanResolve(user, ticket);
+
+    const adminObjectId = new Types.ObjectId(user.userId);
+    const now = new Date();
+
+    ticket.status = dto.status;
+    ticket.resolution = {
+      justification: dto.justification.trim(),
+      resolvedBy: adminObjectId,
+      resolvedAt: now,
+    };
+
+    const actionText = dto.status === TicketStatus.Resolved ? 'اعتماد حل الشكوى' : 'رفض الشكوى رسمياً';
+    ticket.timeline.push({
+      action: actionText,
+      note: `القرار: ${dto.justification.trim()}`,
+      performedBy: adminObjectId,
+      timestamp: now,
+    });
+
+    return ticket.save();
+  }
+
+  /**
+   * Returns tickets strictly filtered by authenticated user's tenancy scope.
+   */
+  async findScoped(user: AuthenticatedUser, filters?: { status?: string; category?: string }) {
+    const baseScope = TenancyScoper.getTicketQueryScope(user);
+    const query: any = { ...baseScope };
+
+    if (filters?.status) {
+      query.status = filters.status;
+    }
+    if (filters?.category) {
+      query.category = filters.category;
+    }
+
+    return this.ticketmodel
+      .find(query)
+      .populate('branchId', 'name code')
+      .populate('routing.assignedBranchId', 'name code')
+      .populate('routing.assignedDepartmentId', 'name code')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
   // Admin: get all tickets for admin dashboard
   async findAll() {
     return this.ticketmodel.find().sort({ createdAt: -1 }).exec();
@@ -50,6 +169,9 @@ export class TicketsService {
   async findOneByStudent(ticketNumber: string) {
     const ticket = await this.ticketmodel
       .findOne({ ticketNumber: ticketNumber.trim().toUpperCase() })
+      .populate('branchId', 'name code')
+      .populate('routing.assignedBranchId', 'name code')
+      .populate('routing.assignedDepartmentId', 'name code')
       .exec();
 
     if (!ticket) {
@@ -61,7 +183,12 @@ export class TicketsService {
 
   // Admin: get one ticket
   async findOneById(id: string) {
-    const ticket = await this.ticketmodel.findById(id).exec();
+    const ticket = await this.ticketmodel
+      .findById(id)
+      .populate('branchId', 'name code')
+      .populate('routing.assignedBranchId', 'name code')
+      .populate('routing.assignedDepartmentId', 'name code')
+      .exec();
 
     if (!ticket) {
       throw new NotFoundException('الشكوى غير موجودة');
