@@ -35,6 +35,7 @@ lerna-debug.log*
 # ================================
 /coverage
 /.nyc_output
+.scannerwork/
 
 # ================================
 # Runtime data
