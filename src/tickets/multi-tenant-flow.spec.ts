@@ -258,7 +258,7 @@ describe('Milestone 5: Multi-Tenant E2E Integration Workflow', () => {
     expect(mockOutboxService.persistTicketWithJobs).toHaveBeenCalledTimes(1);
 
     // Verify outbox entries
-    expect(mockOutboxJobs.length).toBe(2);
+    expect(mockOutboxJobs).toHaveLength(2);
     expect(mockOutboxJobs.some((j) => j.modelType === AiModelType.SUMMARIZE)).toBe(true);
     expect(mockOutboxJobs.some((j) => j.modelType === AiModelType.CLASSIFY_ROUTE)).toBe(true);
   });
@@ -445,7 +445,7 @@ describe('Milestone 5: Multi-Tenant E2E Integration Workflow', () => {
 
     // 4. Presidential Escalation Queue
     const escalations = await analyticsService.getRecentEscalations(10);
-    expect(escalations.length).toBe(1);
+    expect(escalations).toHaveLength(1);
     expect(escalations[0].routing.isEscalatedToPresident).toBe(true);
 
     // 5. UTF-8 BOM CSV Export

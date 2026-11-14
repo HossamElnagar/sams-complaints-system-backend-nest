@@ -12,7 +12,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install all dependencies (including devDependencies needed for build)
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # Copy application source and build configurations
 COPY tsconfig.json tsconfig.build.json nest-cli.json vitest.config.ts vitest.config.e2e.ts ./
@@ -31,7 +31,7 @@ ENV PORT=5000
 
 # Install production dependencies only
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # Copy compiled JavaScript output from builder stage
 COPY --from=builder /app/dist ./dist
